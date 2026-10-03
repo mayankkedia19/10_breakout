@@ -2,7 +2,15 @@
 GameEngine: owns the paddle, ball, and bricks.
 
 Includes a 3-life system with game over / win states and restart (R),
-and three brick types (normal, strong, unbreakable).
+three brick types (normal, strong, unbreakable), and combo scoring.
+
+Combo scoring:
+- Every brick destroyed back-to-back (without losing the ball) raises
+  the combo; the multiplier is 1 + combo, capped at MAX_MULTIPLIER.
+- Points for a destroyed brick = base points for its type * multiplier.
+- Chipping a strong brick (not destroying it) earns a few points at the
+  current multiplier but does not raise the combo.
+- Losing the ball resets the combo back to x1.
 """
 
 import pygame
@@ -32,6 +40,11 @@ LEVEL_LAYOUT = [
 ]
 LAYOUT_TYPES = {"N": NORMAL, "S": STRONG, "U": UNBREAKABLE}
 
+# Scoring
+BRICK_POINTS = {NORMAL: 10, STRONG: 30}
+CHIP_POINTS = 2
+MAX_MULTIPLIER = 8
+
 
 class GameEngine:
     def __init__(self):
@@ -45,6 +58,16 @@ class GameEngine:
         self.lives = STARTING_LIVES
         self.game_over = False
         self.won = False
+        self.score = 0
+        self.combo = 0
+
+    @property
+    def multiplier(self):
+        return min(1 + self.combo, MAX_MULTIPLIER)
+
+    def _on_brick_destroyed(self, brick):
+        self.score += BRICK_POINTS.get(brick.brick_type, 0) * self.multiplier
+        self.combo += 1  # next brick is worth more
 
     def _build_bricks(self):
         bricks = []
@@ -65,6 +88,7 @@ class GameEngine:
         self.paddle.x = WIDTH / 2
 
     def _lose_life(self):
+        self.combo = 0  # missing the ball breaks the combo
         self.lives -= 1
         if self.lives <= 0:
             self.lives = 0
@@ -100,6 +124,9 @@ class GameEngine:
             if handle_ball_brick_collision(self.ball, brick):
                 if brick.hit():  # True only when a breakable brick runs out of hits
                     self.bricks.remove(brick)
+                    self._on_brick_destroyed(brick)
+                elif brick.breakable:
+                    self.score += CHIP_POINTS * self.multiplier
                 break
 
         # Unbreakable bricks don't count towards winning.
@@ -112,9 +139,9 @@ class GameEngine:
     def draw(self, surface, font):
         from game import renderer
         renderer.draw_scene(surface, self.paddle, self.ball, self.bricks)
-        renderer.draw_text(surface, font, f"Bricks left: {self.breakable_bricks_left()}", (10, 10))
-        renderer.draw_lives(surface, font, self.lives)
+        renderer.draw_hud(surface, font, self.score, self.multiplier,
+                          self.breakable_bricks_left(), self.lives)
         if self.game_over:
-            renderer.draw_banner(surface, font, "GAME OVER - Press R to restart")
+            renderer.draw_banner(surface, font, f"GAME OVER  Score: {self.score}  (R to restart)")
         elif self.won:
-            renderer.draw_banner(surface, font, "YOU WIN! - Press R to play again")
+            renderer.draw_banner(surface, font, f"YOU WIN!  Score: {self.score}  (R to replay)")

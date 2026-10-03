@@ -69,3 +69,19 @@ def draw_lives(surface, font, lives):
     for i in range(3):
         color = (255, 90, 90) if i < lives else (70, 70, 80)
         pygame.draw.circle(surface, color, (cx + i * spacing, 21), icon_r)
+
+
+def draw_hud(surface, font, score, multiplier, bricks_left, lives):
+    """Top bar: score + multiplier on the left, bricks in the middle, lives on the right."""
+    draw_text(surface, font, f"Score: {score}", (10, 10))
+    # Multiplier turns from white to gold to orange as the combo grows.
+    if multiplier >= 5:
+        mcolor = (255, 140, 60)
+    elif multiplier >= 2:
+        mcolor = (255, 220, 80)
+    else:
+        mcolor = COLOR_TEXT
+    draw_text(surface, font, f"x{multiplier}", (150, 10), mcolor)
+    bricks = font.render(f"Bricks: {bricks_left}", True, COLOR_TEXT)
+    surface.blit(bricks, bricks.get_rect(midtop=(surface.get_width() // 2 + 20, 10)))
+    draw_lives(surface, font, lives)
