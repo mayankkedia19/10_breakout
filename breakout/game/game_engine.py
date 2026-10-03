@@ -1,14 +1,15 @@
 """
 GameEngine: owns the paddle, ball, and bricks.
 
-Includes a 3-life system with game over / win states and restart (R).
+Includes a 3-life system with game over / win states and restart (R),
+and three brick types (normal, strong, unbreakable).
 """
 
 import pygame
 
 from game.paddle import Paddle
 from game.ball import Ball
-from game.brick import Brick
+from game.brick import Brick, NORMAL, STRONG, UNBREAKABLE
 from game.collision import handle_ball_brick_collision
 from game.renderer import WIDTH, HEIGHT
 
@@ -20,6 +21,16 @@ BRICK_GAP = 6
 BRICK_TOP_MARGIN = 50
 
 STARTING_LIVES = 3
+
+# Level layout: one character per brick.
+#   N = normal, S = strong, U = unbreakable
+LEVEL_LAYOUT = [
+    "SSSSSSSS",
+    "NNUNNUNN",
+    "NNNNNNNN",
+    "NNNNNNNN",
+]
+LAYOUT_TYPES = {"N": NORMAL, "S": STRONG, "U": UNBREAKABLE}
 
 
 class GameEngine:
@@ -39,12 +50,15 @@ class GameEngine:
         bricks = []
         total_width = BRICK_COLS * (BRICK_WIDTH + BRICK_GAP) - BRICK_GAP
         start_x = (WIDTH - total_width) / 2
-        for row in range(BRICK_ROWS):
-            for col in range(BRICK_COLS):
+        for row, line in enumerate(LEVEL_LAYOUT[:BRICK_ROWS]):
+            for col, ch in enumerate(line[:BRICK_COLS]):
                 x = start_x + col * (BRICK_WIDTH + BRICK_GAP)
                 y = BRICK_TOP_MARGIN + row * (BRICK_HEIGHT + BRICK_GAP)
-                bricks.append(Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT))
+                bricks.append(Brick(x, y, BRICK_WIDTH, BRICK_HEIGHT, LAYOUT_TYPES[ch]))
         return bricks
+
+    def breakable_bricks_left(self):
+        return sum(1 for b in self.bricks if b.breakable)
 
     def _reset_ball(self):
         self.ball = Ball(x=WIDTH / 2, y=HEIGHT - 50)
@@ -84,12 +98,12 @@ class GameEngine:
 
         for brick in self.bricks:
             if handle_ball_brick_collision(self.ball, brick):
-                brick.hits_remaining -= 1
-                if brick.hits_remaining <= 0:
+                if brick.hit():  # True only when a breakable brick runs out of hits
                     self.bricks.remove(brick)
                 break
 
-        if not self.bricks:
+        # Unbreakable bricks don't count towards winning.
+        if self.breakable_bricks_left() == 0:
             self.won = True
 
         if self.ball.is_below(HEIGHT):
@@ -98,7 +112,7 @@ class GameEngine:
     def draw(self, surface, font):
         from game import renderer
         renderer.draw_scene(surface, self.paddle, self.ball, self.bricks)
-        renderer.draw_text(surface, font, f"Bricks left: {len(self.bricks)}", (10, 10))
+        renderer.draw_text(surface, font, f"Bricks left: {self.breakable_bricks_left()}", (10, 10))
         renderer.draw_lives(surface, font, self.lives)
         if self.game_over:
             renderer.draw_banner(surface, font, "GAME OVER - Press R to restart")

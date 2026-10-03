@@ -16,10 +16,33 @@ COLOR_TEXT = (255, 255, 255)
 def draw_scene(surface, paddle, ball, bricks):
     surface.fill(COLOR_BG)
     for brick in bricks:
-        pygame.draw.rect(surface, brick.color, brick.get_rect())
-        pygame.draw.rect(surface, (10, 10, 15), brick.get_rect(), 1)
+        draw_brick(surface, brick)
     pygame.draw.rect(surface, COLOR_PADDLE, paddle.get_rect(), border_radius=4)
     pygame.draw.circle(surface, COLOR_BALL, (int(ball.x), int(ball.y)), ball.radius)
+
+
+def draw_brick(surface, brick):
+    rect = brick.get_rect()
+    pygame.draw.rect(surface, brick.color, rect)
+
+    if brick.brick_type == "unbreakable":
+        # Metallic look: light top edge, dark bottom edge, rivets in the corners.
+        pygame.draw.line(surface, (200, 200, 210), rect.topleft, (rect.right - 1, rect.top), 2)
+        pygame.draw.line(surface, (60, 60, 70), (rect.left, rect.bottom - 1),
+                         (rect.right - 1, rect.bottom - 1), 2)
+        for cx in (rect.left + 6, rect.right - 7):
+            for cy in (rect.top + 6, rect.bottom - 7):
+                pygame.draw.circle(surface, (80, 80, 90), (cx, cy), 2)
+        pygame.draw.rect(surface, (40, 40, 50), rect, 2)
+    elif brick.brick_type == "strong":
+        # Thick light border plus pips showing hits remaining.
+        pygame.draw.rect(surface, (230, 240, 255), rect, 2)
+        pip_r, gap = 3, 10
+        start = rect.centerx - (brick.hits_remaining - 1) * gap / 2
+        for i in range(brick.hits_remaining):
+            pygame.draw.circle(surface, (20, 30, 70), (int(start + i * gap), rect.centery), pip_r)
+    else:
+        pygame.draw.rect(surface, (10, 10, 15), rect, 1)
 
 
 def draw_text(surface, font, text, pos, color=COLOR_TEXT):
