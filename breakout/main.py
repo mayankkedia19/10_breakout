@@ -3,7 +3,7 @@ Breakout (Lab Starter)
 
 Run with:  python3 main.py
 
-Controls: Left/Right arrows to move the paddle.
+Controls: Left/Right arrows to move the paddle, R to restart after game over.
 """
 
 import pygame

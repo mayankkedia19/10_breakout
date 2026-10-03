@@ -1,11 +1,7 @@
 """
 GameEngine: owns the paddle, ball, and bricks.
 
-Starter version: single brick type, no lives yet, no score/combo yet.
-Ball-brick collision also has a known bug (see game/collision.py) that
-Task 1 asks you to fix. If the ball falls below the paddle, it just
-resets to the starting position with no consequence - that's what
-Task 2 builds on.
+Includes a 3-life system with game over / win states and restart (R).
 """
 
 import pygame
@@ -23,12 +19,21 @@ BRICK_HEIGHT = 22
 BRICK_GAP = 6
 BRICK_TOP_MARGIN = 50
 
+STARTING_LIVES = 3
+
 
 class GameEngine:
     def __init__(self):
+        self.reset_game()
+
+    def reset_game(self):
+        """Start (or restart) a fresh game."""
         self.paddle = Paddle(x=WIDTH / 2, y=HEIGHT - 30)
         self.ball = Ball(x=WIDTH / 2, y=HEIGHT - 50)
         self.bricks = self._build_bricks()
+        self.lives = STARTING_LIVES
+        self.game_over = False
+        self.won = False
 
     def _build_bricks(self):
         bricks = []
@@ -43,8 +48,19 @@ class GameEngine:
 
     def _reset_ball(self):
         self.ball = Ball(x=WIDTH / 2, y=HEIGHT - 50)
+        self.paddle.x = WIDTH / 2
+
+    def _lose_life(self):
+        self.lives -= 1
+        if self.lives <= 0:
+            self.lives = 0
+            self.game_over = True
+        else:
+            self._reset_ball()
 
     def handle_input(self, keys_pressed):
+        if self.game_over or self.won:
+            return
         dx = 0
         if keys_pressed[pygame.K_LEFT]:
             dx -= self.paddle.speed
@@ -53,9 +69,13 @@ class GameEngine:
         self.paddle.move(dx, WIDTH)
 
     def handle_keydown(self, key):
-        pass
+        if key == pygame.K_r and (self.game_over or self.won):
+            self.reset_game()
 
     def update(self):
+        if self.game_over or self.won:
+            return  # freeze the board until the player restarts
+
         self.ball.update()
         self.ball.bounce_off_walls(WIDTH)
 
@@ -65,15 +85,22 @@ class GameEngine:
         for brick in self.bricks:
             if handle_ball_brick_collision(self.ball, brick):
                 brick.hits_remaining -= 1
-                # FIX: once a brick has no hits left, remove it from play.
                 if brick.hits_remaining <= 0:
                     self.bricks.remove(brick)
-                break  # only one brick per frame; safe to mutate list here
+                break
+
+        if not self.bricks:
+            self.won = True
 
         if self.ball.is_below(HEIGHT):
-            self._reset_ball()
+            self._lose_life()
 
     def draw(self, surface, font):
         from game import renderer
         renderer.draw_scene(surface, self.paddle, self.ball, self.bricks)
         renderer.draw_text(surface, font, f"Bricks left: {len(self.bricks)}", (10, 10))
+        renderer.draw_lives(surface, font, self.lives)
+        if self.game_over:
+            renderer.draw_banner(surface, font, "GAME OVER - Press R to restart")
+        elif self.won:
+            renderer.draw_banner(surface, font, "YOU WIN! - Press R to play again")
