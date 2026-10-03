@@ -32,9 +32,11 @@ STARTING_LIVES = 3
 
 # Level layout: one character per brick.
 #   N = normal, S = strong, U = unbreakable
+# Unbreakable bricks sit in the top row so they never shield a
+# breakable brick from below (which could make a level unwinnable).
 LEVEL_LAYOUT = [
-    "SSSSSSSS",
-    "NNUNNUNN",
+    "SUSSSSUS",
+    "NNSNNSNN",
     "NNNNNNNN",
     "NNNNNNNN",
 ]

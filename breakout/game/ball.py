@@ -35,6 +35,11 @@ class Ball:
         # so it doesn't just bounce straight up and down forever.
         offset = (self.x - paddle_rect.centerx) / (paddle_rect.width / 2)
         self.vx = offset * abs(self.vy) * 0.75
+        # Keep a minimum sideways speed so a dead-centre hit can't trap
+        # the ball bouncing straight up and down forever.
+        min_vx = abs(self.vy) * 0.2
+        if abs(self.vx) < min_vx:
+            self.vx = min_vx if self.vx >= 0 else -min_vx
 
     def is_below(self, height):
         return self.y - self.radius > height
